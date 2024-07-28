@@ -1,0 +1,277 @@
+/*1.1 Sales, Profit of each category.
+WITH cte AS(
+SELECT
+  category,
+  SUM(sales) AS Total_sales,
+  SUM(profit) AS Total_profit,
+  SUM(quantity) AS Total_quantities,
+  SUM(profit)/SUM(Sales) AS Profit_margin,
+  SUM(sales)/SUM(Quantity) AS Average_price
+FROM `flowing-tea-427509-v6.global_supermarket.orders`
+GROUP BY category
+)
+SELECT
+  category AS Category,
+  FORMAT("%'d",CAST(Total_sales AS INT)) AS Total_sales,
+  ROUND(Total_sales/(SUM(Total_sales) OVER ()),4) AS Sales_portion,
+  FORMAT("%'d",CAST(Total_profit AS INT)) AS Total_profit,
+  ROUND(Profit_margin,4) AS Profit_margin,
+  FORMAT("%'d",CAST(Total_quantities AS INT)) AS Total_quantities,
+  FORMAT("%'d",CAST(Average_price AS INT)) AS Average_price  
+FROM cte
+*/
+
+/*1.2 Sales, Profit of each sub-category.
+WITH cte AS(
+SELECT
+  category,
+  `sub-category`,
+  SUM(sales) AS Total_sales,
+  SUM(profit) AS Total_profit,
+  SUM(quantity) AS Total_quantities,
+  SUM(profit)/SUM(Sales) AS Profit_margin,
+  SUM(sales)/SUM(Quantity) AS Average_price
+FROM `flowing-tea-427509-v6.global_supermarket.orders`
+GROUP BY category, `sub-category`
+)
+SELECT
+  category AS Category,
+  `sub-category` AS `Sub-category`,
+  FORMAT("%'d",CAST(Total_sales AS INT)) AS Total_sales,
+  ROUND(Total_sales/(SUM(Total_sales) OVER ()),4) AS Sales_portion,
+  FORMAT("%'d",CAST(Total_profit AS INT)) AS Total_profit,
+  ROUND(Profit_margin,4) AS Profit_margin,
+  FORMAT("%'d",CAST(Total_quantities AS INT)) AS Total_quantities,
+  FORMAT("%'d",CAST(Average_price AS INT)) AS Average_price  
+FROM cte
+ORDER BY cte.Total_sales DESC
+*/
+
+/*1.3. Find out products that have negative profit
+SELECT
+  category AS Category,
+  `sub-category` AS Sub_category,
+  product_name AS Product_name,
+  FORMAT("%'d",CAST(SUM(sales) AS INT)) AS Total_sales,
+  FORMAT("%'d",CAST(SUM(profit) AS INT)) AS Total_profit
+FROM `flowing-tea-427509-v6.global_supermarket.orders`
+GROUP BY 1,2,3
+HAVING SUM(profit)<0
+ORDER BY SUM(profit)
+*/
+
+/*1.4. Find out table have positive profit
+SELECT
+  product_name AS Product_name,
+  FORMAT("%'d",CAST(SUM(sales) AS INT)) AS Total_sales,
+  FORMAT("%'d",CAST(SUM(profit) AS INT)) AS Total_profit
+FROM `flowing-tea-427509-v6.global_supermarket.orders`
+WHERE `sub-category` = 'Tables'
+GROUP BY 1
+HAVING SUM(profit)>0
+ORDER BY SUM(profit) DESC
+*/
+
+/*2.1. Sales + profit by year
+WITH cte AS (
+SELECT
+  *,
+  EXTRACT(YEAR FROM order_date) as year
+FROM `flowing-tea-427509-v6.global_supermarket.orders`
+),
+cte2 AS (
+SELECT
+  year,
+  SUM(sales) as Total_sales,
+  SUM(profit) as Total_profit,
+  SUM(quantity) as Total_quantities
+FROM cte
+GROUP BY year
+)
+SELECT
+  year AS Year,
+  FORMAT("%'d",CAST(Total_sales AS INT)) AS Total_sales,
+  FORMAT("%'d",CAST(LAG(Total_sales) OVER (ORDER BY year) AS INT)) AS Total_sales_PY,
+  ROUND(Total_sales*100/LAG(Total_sales) OVER (ORDER BY year),2) AS SalesYoY,
+  FORMAT("%'d",CAST(Total_profit AS INT)) AS Total_profit,
+  FORMAT("%'d",CAST(LAG(Total_profit) OVER (ORDER BY year) AS INT)) AS Total_profit_PY,
+  ROUND(Total_profit*100/LAG(Total_profit) OVER (ORDER BY year),2) AS ProfitYoY,
+  FORMAT("%'d",CAST(Total_quantities AS INT)) AS Total_quantities,
+  FORMAT("%'d",CAST(LAG(Total_quantities) OVER (ORDER BY year) AS INT)) AS Total_quantities_PY,
+  ROUND(Total_quantities*100/LAG(Total_quantities) OVER (ORDER BY year),2) AS QuantitiesYoY,
+  ROUND(cte2.Total_profit/cte2.Total_sales,2) AS Profit_margin
+FROM cte2
+ORDER BY year
+*/
+
+/*2.2. Sales + profit by year by category
+WITH cte AS (
+SELECT
+  *,
+  EXTRACT(YEAR FROM order_date) as year
+FROM `flowing-tea-427509-v6.global_supermarket.orders`
+),
+cte2 AS (
+SELECT
+  category,
+  year,
+  SUM(sales) as Total_sales,
+  SUM(profit) as Total_profit,
+  SUM(quantity) as Total_quantities
+FROM cte
+GROUP BY category, year
+)
+SELECT
+  category AS Category,
+  year AS Year,
+  FORMAT("%'d",CAST(Total_sales AS INT)) AS Total_sales,
+  FORMAT("%'d",CAST(LAG(Total_sales) OVER (PARTITION BY category ORDER BY year) AS INT)) AS Total_sales_PY,
+  ROUND(Total_sales*100/LAG(Total_sales) OVER (PARTITION BY category ORDER BY year),2) AS SalesYoY,
+  FORMAT("%'d",CAST(Total_profit AS INT)) AS Total_profit,
+  FORMAT("%'d",CAST(LAG(Total_profit) OVER (PARTITION BY category ORDER BY year) AS INT)) AS Total_profit_PY,
+  ROUND(Total_profit*100/LAG(Total_profit) OVER (PARTITION BY category ORDER BY year),2) AS ProfitYoY,
+  FORMAT("%'d",CAST(Total_quantities AS INT)) AS Total_quantities,
+  FORMAT("%'d",CAST(LAG(Total_quantities) OVER (PARTITION BY category ORDER BY year) AS INT)) AS Total_quantities_PY,
+  ROUND(Total_quantities*100/LAG(Total_quantities) OVER (PARTITION BY category ORDER BY year),2) AS QuantitiesYoY,
+  ROUND(cte2.Total_profit/cte2.Total_sales,2) AS Profit_margin
+FROM cte2
+ORDER BY category, year
+*/
+
+/*2.3. Sales + profit by month
+WITH cte AS(
+SELECT
+  *,
+  EXTRACT(YEAR FROM order_date) AS year,
+  EXTRACT(MONTH FROM order_date) AS month
+FROM `flowing-tea-427509-v6.global_supermarket.orders`
+)
+SELECT
+  year AS Year,
+  month AS Month,
+  FORMAT("%'d",CAST(SUM(sales) AS INT)) AS Total_sales,
+  FORMAT("%'d",CAST(SUM(profit) AS INT)) AS Total_profit
+FROM cte
+WHERE year in (2014, 2015)
+GROUP BY year, month
+ORDER BY year, month
+*/
+
+/*3. By segment
+WITH cte AS (
+SELECT
+  *,
+  EXTRACT(YEAR FROM order_date) as year
+FROM `flowing-tea-427509-v6.global_supermarket.orders`
+),
+cte2012 AS (
+SELECT
+  segment,
+  SUM(sales) as total_sales_2012
+FROM cte
+WHERE year=2012
+GROUP BY segment
+),
+cte2013 AS (
+SELECT
+  segment,
+  SUM(sales) as total_sales_2013
+FROM cte
+WHERE year=2013
+GROUP BY segment
+),
+cte2014 AS (
+SELECT
+  segment,
+  SUM(sales) as total_sales_2014
+FROM cte
+WHERE year=2014
+GROUP BY segment
+),
+cte2015 AS (
+SELECT
+  segment,
+  SUM(sales) as total_sales_2015
+FROM cte
+WHERE year=2015
+GROUP BY segment
+)
+SELECT
+  segment,
+  FORMAT("%'d",CAST(cte2012.total_sales_2012 AS INT)) AS sales_2012,
+  ROUND(cte2012.total_sales_2012/SUM(cte2012.total_sales_2012) OVER (),4) AS sales_2012_proportion,
+  FORMAT("%'d",CAST(cte2013.total_sales_2013 AS INT)) AS sales_2013,
+  ROUND(cte2013.total_sales_2013/SUM(cte2013.total_sales_2013) OVER (),4) AS sales_2013_proportion,
+  FORMAT("%'d",CAST(cte2014.total_sales_2014 AS INT)) AS sales_2014,
+  ROUND(cte2014.total_sales_2014/SUM(cte2014.total_sales_2014) OVER (),4) AS sales_2014_proportion,
+  FORMAT("%'d",CAST(cte2015.total_sales_2015 AS INT)) AS sales_2015,
+  ROUND(cte2015.total_sales_2015/SUM(cte2015.total_sales_2015) OVER (),4) AS sales_2015_proportion
+FROM cte2012
+JOIN cte2013 using (segment)
+JOIN cte2014 using (segment)
+JOIN cte2015 using (segment)
+*/
+
+/*4.1. Sales of each market
+SELECT
+  market AS Market,
+  FORMAT("%'d",CAST(SUM(sales) AS INT)) AS Total_sales,
+  COUNT(DISTINCT(country)) AS No_of_countries
+FROM `flowing-tea-427509-v6.global_supermarket.orders`
+GROUP BY market
+ORDER BY SUM(sales) DESC
+*/
+
+/*4.2. Profit of each market
+SELECT
+  market AS Market,
+  FORMAT("%'d",CAST(SUM(profit) AS INT)) AS Total_profit,
+  COUNT(DISTINCT(country)) AS No_of_countries
+FROM `flowing-tea-427509-v6.global_supermarket.orders`
+GROUP BY market
+ORDER BY SUM(profit) DESC
+*/
+
+/*4.3. Top 10 countries with the highest sales
+SELECT
+  country AS Country,
+  market AS Market,
+  FORMAT("%'d",CAST(SUM(sales) AS INT)) AS Total_sales
+FROM `flowing-tea-427509-v6.global_supermarket.orders`
+GROUP BY country, market
+ORDER BY SUM(sales) DESC
+LIMIT 10
+*/
+
+/*4.4. Top 10 countries with the highest profit
+SELECT
+  country AS Country,
+  market AS Market,
+  FORMAT("%'d",CAST(SUM(profit) AS INT)) AS Total_profit
+FROM `flowing-tea-427509-v6.global_supermarket.orders`
+GROUP BY country, market
+ORDER BY SUM(profit) DESC
+LIMIT 10
+*/
+  
+/*4.5. 15 countries with the lowest sales
+SELECT
+  country AS Country,
+  market AS Market,
+  FORMAT("%'d",CAST(SUM(sales) AS INT)) AS Total_sales
+FROM `flowing-tea-427509-v6.global_supermarket.orders`
+GROUP BY country, market
+ORDER BY SUM(sales)
+LIMIT 15
+*/
+
+/*4.6. 10 countries with the lowest profit
+SELECT
+  country AS Country,
+  market AS Market,
+  FORMAT("%'d",CAST(SUM(profit) AS INT)) AS Total_profit
+FROM `flowing-tea-427509-v6.global_supermarket.orders`
+GROUP BY country, market
+ORDER BY SUM(profit)
+LIMIT 15
+*/
